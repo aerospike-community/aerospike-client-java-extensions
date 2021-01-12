@@ -16,18 +16,13 @@
  */
 package com.aerospike.helper.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.xml.bind.DatatypeConverter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Set;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class represents a UDF module
@@ -37,12 +32,12 @@ import org.slf4j.LoggerFactory;
  */
 public class Module {
 
-	private static Logger log = LoggerFactory.getLogger(Module.class);
+	private static final Logger log = LoggerFactory.getLogger(Module.class);
 
 	private String name;
 	protected Map<String, String> values;
 	private String source;
-	private List<Function> functions;
+	private List<Function> functions; // TODO never queried
 
 	private static final Pattern fn_name = Pattern.compile("function\\s+([a-zA-Z_$][a-zA-Z\\d_$]*\\(.*\\))");
 
@@ -79,7 +74,7 @@ public class Module {
 		if (!info.isEmpty()) {
 			String[] parts = info.split(",");
 			if (values == null) {
-				values = new HashMap<String, String>();
+				values = new HashMap<>();
 			}
 			for (String part : parts) {
 				kvPut(part, this.values);
@@ -100,15 +95,15 @@ public class Module {
 			kvPut(kv, this.values);
 		}
 		try {
-			String code = "";
+			String code;
 			// key name change
 			if (values.containsKey("recordContent"))
 				code = values.get("recordContent");
 			else
 				code = values.get("content");
-			//code = code.substring(0, code.length()-2);
+
 			if (code != null)
-				setSource(new String(DatatypeConverter.parseBase64Binary(code)));
+				setSource(new String(Base64.getDecoder().decode((code))));
 		} catch (Exception e) {
 			log.error("Cannot decode " + getName(), e);
 		}
@@ -119,7 +114,7 @@ public class Module {
 	}
 
 	public List<NameValuePair> getValues() {
-		List<NameValuePair> result = new ArrayList<NameValuePair>();
+		List<NameValuePair> result = new ArrayList<>();
 		Set<String> keys = this.values.keySet();
 		for (String key : keys) {
 			String value = this.values.get(key);
@@ -136,7 +131,7 @@ public class Module {
 	public void setSource(String source) {
 		this.source = source;
 		Matcher matcher = fn_name.matcher(source);
-		functions = new ArrayList<Function>();
+		functions = new ArrayList<>();
 		while (matcher.find()) {
 			String functionString = matcher.group(1);
 			functions.add(new Function(this, functionString));
